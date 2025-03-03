@@ -9,7 +9,7 @@ import gzip
 import io
 
 # Load the model from GitHub (replace with your raw GitHub URL)
-model_url = "YOUR_RAW_GITHUB_MODEL_URL_HERE"  # Replace with your actual URL
+model_rf.pkl.gz = "YOUR_RAW_GITHUB_MODEL_URL_HERE"  # Replace with your actual URL
 try:
     response = pd.read_csv(model_url, compression='gzip', header=None, sep='\t', quoting=3, error_bad_lines=False)
     model_data = gzip.decompress(response.iloc[0, 0].encode('latin1'))
