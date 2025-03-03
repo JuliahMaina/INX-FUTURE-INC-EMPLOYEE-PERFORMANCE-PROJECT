@@ -1,6 +1,14 @@
 streamlit
-pickle-mixin 
+pandas
+matplotlib
+seaborn
+requests
+scikit-learn
+category_encoders
+xgboost
+imbalanced-learn
+scipy
+numpy
+pickle-mixin  #
 openpyxl
 xlrd
-io
-pandas
