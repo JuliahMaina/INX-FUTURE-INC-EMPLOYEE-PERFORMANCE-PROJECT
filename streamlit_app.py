@@ -6,24 +6,12 @@ import streamlit as st
 import pandas as pd
 import pickle
 import gzip
-import io
-
-# Load the model from GitHub (replace with your raw GitHub URL)
-model_rf = "model_rf.pkl.gz"  # Replace with your actual URL
-try:
-    response = pd.read_csv(model_url, compression='gzip', header=None, sep='\t', quoting=3, error_bad_lines=False)
-    model_data = gzip.decompress(response.iloc[0, 0].encode('latin1'))
-    model_rf = pickle.loads(model_data)
-
-except Exception as e:
-    st.error(f"Error loading the model: {e}")
-    st.stop()
 
 # Feature Columns
-feature_columns = ['EmpDepartment', 'EmpEnvironmentSatisfaction',
-                   'EmpLastSalaryHikePercent', 'EmpWorkLifeBalance',
-                   'ExperienceYearsAtThisCompany', 'ExperienceYearsInCurrentRole',
-                   'YearsSinceLastPromotion', 'YearsWithCurrManager']
+feature_cols = ['EmpDepartment', 'EmpEnvironmentSatisfaction',
+                'EmpLastSalaryHikePercent', 'EmpWorkLifeBalance',
+                'ExperienceYearsAtThisCompany', 'ExperienceYearsInCurrentRole',
+                'YearsSinceLastPromotion', 'YearsWithCurrManager']
 
 # Department Encoding
 department_encoding = {
@@ -35,41 +23,64 @@ department_encoding = {
     "Sales": 5
 }
 
-def preprocess_data(df):
-    """Preprocesses the dataframe for prediction."""
-    df = df[feature_columns]
-    df['EmpDepartment'] = df['EmpDepartment'].replace(department_encoding)
-    return df
-
-def predict_performance(df, model):
-    """Predicts performance rating using the loaded model."""
-    predictions = model.predict(df)
-    return predictions
-
-st.title("Employee Performance Prediction")
-
-uploaded_file = st.file_uploader("Upload an Excel file", type=["xlsx"])
-
-if uploaded_file is not None:
+# Model Loading Function
+@st.cache_resource # Caching the model for faster loading
+def load_model():
     try:
-        excel_file = pd.ExcelFile(uploaded_file)
-        df = excel_file.parse(excel_file.sheet_names[0])
-
-        # Validate feature columns
-        if not all(col in df.columns for col in feature_columns):
-            missing_cols = [col for col in feature_columns if col not in df.columns]
-            st.error(f"Error: The uploaded file is missing the following required columns: {missing_cols}")
-        else:
-            # Preprocess the data
-            preprocessed_df = preprocess_data(df.copy())
-
-            # Make predictions
-            predictions = predict_performance(preprocessed_df, model_rf)
-
-            # Display results
-            result_df = pd.DataFrame({'Predicted Performance Rating': predictions})
-            st.write("Prediction Results:")
-            st.dataframe(result_df)
-
+        with gzip.open('model_rf.pkl.gz', 'rb') as f:
+            model = pickle.load(f)
+        return model
+    except FileNotFoundError:
+        st.error("Model file 'model_rf.pkl.gz' not found in the current directory. Please ensure it is uploaded or placed correctly.")
+        return None
     except Exception as e:
-        st.error(f"An error occurred: {e}")
+        st.error(f"Error loading the model: {e}")
+        return None
+
+# Streamlit App
+def main():
+    st.title("Employee Performance Rating Prediction App")
+
+    uploaded_file = st.file_uploader("Upload an Excel file", type=['xlsx', 'xls'])
+
+    if uploaded_file is not None:
+        try:
+            # Read the first worksheet of the Excel file
+            df = pd.read_excel(uploaded_file, sheet_name=0)
+
+            # Validate Feature Columns
+            if not all(col in df.columns for col in feature_cols):
+                missing_cols = [col for col in feature_cols if col not in df.columns]
+                st.error(f"The first worksheet is missing the following required columns: {', '.join(missing_cols)}")
+            else:
+                st.success("Worksheet validated successfully. Required columns found!")
+
+                # Make a copy to avoid SettingWithCopyWarning if you intend to modify df later
+                df_processed = df.copy()
+
+                # Encode 'EmpDepartment'
+                if 'EmpDepartment' in df_processed.columns:
+                    df_processed['EmpDepartment'] = df_processed['EmpDepartment'].replace(department_encoding)
+                else:
+                    st.warning("'EmpDepartment' column not found in the uploaded file, encoding step skipped for this column.")
+
+                # Load Model
+                model = load_model()
+                if model:
+                    # Prepare features for prediction
+                    X = df_processed[feature_cols].copy() # Keep the feature columns data
+
+                    # Predict Performance Rating
+                    predictions = model.predict(X)
+
+                    # Display Results - Include Feature Columns
+                    results_df = X.copy() # Start with the feature columns data
+                    results_df['Predicted Performance Rating'] = predictions # Add the prediction column
+                    st.subheader("Prediction Results with Input Features")
+                    st.dataframe(results_df)
+
+        except Exception as e:
+            st.error(f"Error processing the uploaded file: {e}")
+
+if _name_ == "_main_":
+    main()
