@@ -2,3 +2,5 @@ streamlit
 pickle-mixin 
 openpyxl
 xlrd
+io
+pandas
