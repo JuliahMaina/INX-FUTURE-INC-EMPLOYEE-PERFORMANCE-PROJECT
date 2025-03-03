@@ -1,6 +1,3 @@
-import streamlit as st
-
-st.title("My App")
 
 import streamlit as st
 import pandas as pd
