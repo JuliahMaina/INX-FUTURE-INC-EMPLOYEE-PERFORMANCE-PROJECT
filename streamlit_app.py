@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import pickle
@@ -79,5 +78,5 @@ def main():
         except Exception as e:
             st.error(f"Error processing the uploaded file: {e}")
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     main()
